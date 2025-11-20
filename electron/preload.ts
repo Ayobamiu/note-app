@@ -12,4 +12,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     askAI: (question: string) => ipcRenderer.invoke('ask-ai', question),
     getReminders: (noteId: number) => ipcRenderer.invoke('get-reminders', noteId),
+    updateReminderStatus: (id: number, status: 'pending' | 'accepted' | 'dismissed') => ipcRenderer.invoke('update-reminder-status', id, status),
 });

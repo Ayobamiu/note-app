@@ -8,63 +8,76 @@ interface ReminderListProps {
 
 export const ReminderList: React.FC<ReminderListProps> = ({ noteId }) => {
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const loadReminders = async () => {
     const items = await window.electronAPI.getReminders(noteId);
-    setReminders(items);
+    // Filter for pending reminders only
+    setReminders(items.filter(r => r.status === 'pending'));
   };
 
   useEffect(() => {
     loadReminders();
-    // Poll for reminders every 5 seconds
     const interval = setInterval(loadReminders, 5000);
     return () => clearInterval(interval);
   }, [noteId]);
 
+  const handleAction = async (id: number, status: 'accepted' | 'dismissed') => {
+    setLoading(true);
+    await window.electronAPI.updateReminderStatus(id, status);
+    await loadReminders();
+    setLoading(false);
+  };
+
   if (reminders.length === 0) return null;
 
+  const currentReminder = reminders[0];
+
   return (
-    <div className="mb-8 space-y-3">
-      {reminders.map(reminder => (
-        <div 
-          key={reminder.id} 
-          className="flex items-start gap-3 p-4 bg-white border border-zinc-200 rounded-xl shadow-sm ring-1 ring-black/5 animate-in slide-in-from-top-2 duration-300"
-        >
-          <div className="p-2 bg-blue-50 text-blue-600 rounded-lg shrink-0">
-            <Bell size={18} />
+    <div className="mb-6">
+      <div className="flex items-center justify-between p-3 bg-blue-50/50 border border-blue-100 rounded-lg group hover:border-blue-200 transition-colors">
+        <div className="flex items-center gap-3 overflow-hidden">
+          <div className="flex items-center justify-center w-8 h-8 bg-white rounded-full shadow-sm text-blue-500 shrink-0">
+            <Bell size={14} className="fill-current" />
           </div>
           
-          <div className="flex-1 min-w-0 pt-0.5">
-            <h4 className="text-sm font-medium text-zinc-900 leading-tight">
-              Suggested Reminder
-            </h4>
-            <p className="text-sm text-zinc-600 mt-1">
-              {reminder.text}
-            </p>
-            {reminder.due_date && (
-              <div className="flex items-center gap-1.5 mt-2 text-xs text-zinc-500 font-medium">
-                <Calendar size={12} />
-                <span>{reminder.due_date}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button 
-              className="p-1.5 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 rounded-md transition-colors"
-              title="Dismiss"
-            >
-              <X size={16} />
-            </button>
-            <button 
-              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-              title="Accept"
-            >
-              <Check size={16} />
-            </button>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600">
+                Suggestion • 1/{reminders.length}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-zinc-700 truncate">
+              <span className="font-medium truncate">{currentReminder.text}</span>
+              {currentReminder.due_date && (
+                <span className="flex items-center gap-1 text-zinc-400 text-xs shrink-0">
+                  <Calendar size={10} />
+                  {currentReminder.due_date}
+                </span>
+              )}
+            </div>
           </div>
         </div>
-      ))}
+
+        <div className="flex items-center gap-1 pl-3 shrink-0">
+          <button
+            onClick={() => handleAction(currentReminder.id, 'dismissed')}
+            disabled={loading}
+            className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+            title="Dismiss"
+          >
+            <X size={16} />
+          </button>
+          <button
+            onClick={() => handleAction(currentReminder.id, 'accepted')}
+            disabled={loading}
+            className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-md transition-colors"
+            title="Accept"
+          >
+            <Check size={16} />
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

@@ -37,6 +37,7 @@ declare global {
 
             askAI: (question: string) => Promise<string>;
             getReminders: (noteId: number) => Promise<Reminder[]>;
+            updateReminderStatus: (id: number, status: 'pending' | 'accepted' | 'dismissed') => Promise<void>;
         };
     }
 }

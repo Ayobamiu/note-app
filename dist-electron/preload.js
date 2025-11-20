@@ -11,4 +11,5 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     deleteNote: (id) => electron_1.ipcRenderer.invoke('delete-note', id),
     askAI: (question) => electron_1.ipcRenderer.invoke('ask-ai', question),
     getReminders: (noteId) => electron_1.ipcRenderer.invoke('get-reminders', noteId),
+    updateReminderStatus: (id, status) => electron_1.ipcRenderer.invoke('update-reminder-status', id, status),
 });

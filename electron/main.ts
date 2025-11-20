@@ -95,6 +95,7 @@ const createWindow = () => {
     });
     ipcMain.handle('delete-note', (event: IpcMainInvokeEvent, id: number) => deleteNote(id));
     ipcMain.handle('get-reminders', (event: IpcMainInvokeEvent, noteId: number) => getReminders(noteId));
+    ipcMain.handle('update-reminder-status', (event: IpcMainInvokeEvent, id: number, status: 'pending' | 'accepted' | 'dismissed') => updateReminderStatus(id, status));
 
     // AI Handlers
     ipcMain.handle('ask-ai', async (event: IpcMainInvokeEvent, question: string) => {

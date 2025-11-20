@@ -121,6 +121,7 @@ const createWindow = () => {
     });
     electron_1.ipcMain.handle('delete-note', (event, id) => (0, db_1.deleteNote)(id));
     electron_1.ipcMain.handle('get-reminders', (event, noteId) => (0, db_1.getReminders)(noteId));
+    electron_1.ipcMain.handle('update-reminder-status', (event, id, status) => (0, db_1.updateReminderStatus)(id, status));
     // AI Handlers
     electron_1.ipcMain.handle('ask-ai', async (event, question) => {
         try {
