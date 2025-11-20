@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -6,6 +39,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const electron_1 = require("electron");
 const path_1 = __importDefault(require("path"));
 const db_1 = require("./db");
+const manager_1 = require("./ai/manager");
 // Initialize database
 (0, db_1.initDB)();
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -29,9 +63,60 @@ const createWindow = () => {
     electron_1.ipcMain.handle('delete-folder', (event, id) => (0, db_1.deleteFolder)(id));
     // Note Handlers
     electron_1.ipcMain.handle('get-notes', (event, folderId) => (0, db_1.getNotes)(folderId));
-    electron_1.ipcMain.handle('create-note', (event, folderId, title, content) => (0, db_1.createNote)(folderId, title, content));
-    electron_1.ipcMain.handle('update-note', (event, id, title, content) => (0, db_1.updateNote)(id, title, content));
+    electron_1.ipcMain.handle('create-note', async (event, folderId, title, content) => {
+        const result = (0, db_1.createNote)(folderId, title, content);
+        const id = result.lastInsertRowid;
+        // Generate embedding in background
+        try {
+            const text = `${title}\n${content}`;
+            const embedding = await manager_1.aiManager.getProvider().generateEmbedding(text);
+            if (embedding.length > 0) {
+                const { saveEmbedding } = await Promise.resolve().then(() => __importStar(require('./db')));
+                saveEmbedding(id, embedding);
+            }
+        }
+        catch (error) {
+            console.error('Failed to generate embedding:', error);
+        }
+        return result;
+    });
+    electron_1.ipcMain.handle('update-note', async (event, id, title, content) => {
+        const result = (0, db_1.updateNote)(id, title, content);
+        // Update embedding in background
+        try {
+            const text = `${title}\n${content}`;
+            const embedding = await manager_1.aiManager.getProvider().generateEmbedding(text);
+            if (embedding.length > 0) {
+                const { saveEmbedding } = await Promise.resolve().then(() => __importStar(require('./db')));
+                saveEmbedding(id, embedding);
+            }
+        }
+        catch (error) {
+            console.error('Failed to update embedding:', error);
+        }
+        return result;
+    });
     electron_1.ipcMain.handle('delete-note', (event, id) => (0, db_1.deleteNote)(id));
+    // AI Handlers
+    electron_1.ipcMain.handle('ask-ai', async (event, question) => {
+        try {
+            const provider = manager_1.aiManager.getProvider();
+            // 1. Embed question
+            const queryVector = await provider.generateEmbedding(question);
+            // 2. Search relevant notes
+            const { searchNotes } = await Promise.resolve().then(() => __importStar(require('./db')));
+            const relevantNotes = searchNotes(queryVector, 5);
+            // 3. Construct context
+            const context = relevantNotes.map((n) => `Title: ${n.title}\nContent: ${n.content}`).join('\n\n');
+            // 4. Generate answer
+            const answer = await provider.generateCompletion(question, context);
+            return answer;
+        }
+        catch (error) {
+            console.error('AI Error:', error);
+            return "Sorry, I encountered an error while thinking.";
+        }
+    });
     // In production, load the index.html of the app.
     if (electron_1.app.isPackaged) {
         mainWindow.loadFile(path_1.default.join(__dirname, '../dist/index.html'));

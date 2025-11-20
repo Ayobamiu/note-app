@@ -26,6 +26,8 @@ declare global {
             createNote: (folderId: number, title: string, content: string) => Promise<void>;
             updateNote: (id: number, title: string, content: string) => Promise<void>;
             deleteNote: (id: number) => Promise<void>;
+
+            askAI: (question: string) => Promise<string>;
         };
     }
 }

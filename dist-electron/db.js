@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteNote = exports.updateNote = exports.createNote = exports.getNotes = exports.deleteFolder = exports.createFolder = exports.getFolders = void 0;
+exports.searchNotes = exports.saveEmbedding = exports.deleteNote = exports.updateNote = exports.createNote = exports.getNotes = exports.deleteFolder = exports.createFolder = exports.getFolders = void 0;
 exports.initDB = initDB;
 const better_sqlite3_1 = __importDefault(require("better-sqlite3"));
 const path_1 = __importDefault(require("path"));
@@ -81,3 +81,41 @@ const deleteNote = (id) => {
     return stmt.run(id);
 };
 exports.deleteNote = deleteNote;
+// Vector Operations
+const saveEmbedding = (noteId, vector) => {
+    const stmt = db.prepare('INSERT OR REPLACE INTO embeddings (note_id, vector) VALUES (?, ?)');
+    // Store vector as JSON string for simplicity in MVP
+    return stmt.run(noteId, JSON.stringify(vector));
+};
+exports.saveEmbedding = saveEmbedding;
+// Simple Cosine Similarity in JS (sufficient for < 1000 notes)
+function cosineSimilarity(vecA, vecB) {
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+    for (let i = 0; i < vecA.length; i++) {
+        dotProduct += vecA[i] * vecB[i];
+        normA += vecA[i] * vecA[i];
+        normB += vecB[i] * vecB[i];
+    }
+    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+const searchNotes = (queryVector, limit = 5) => {
+    const stmt = db.prepare(`
+    SELECT notes.*, embeddings.vector 
+    FROM notes 
+    JOIN embeddings ON notes.id = embeddings.note_id
+  `);
+    const allNotes = stmt.all();
+    const scoredNotes = allNotes.map((note) => {
+        const vector = JSON.parse(note.vector);
+        return {
+            ...note,
+            score: cosineSimilarity(queryVector, vector)
+        };
+    });
+    // Sort by score descending
+    scoredNotes.sort((a, b) => b.score - a.score);
+    return scoredNotes.slice(0, limit);
+};
+exports.searchNotes = searchNotes;

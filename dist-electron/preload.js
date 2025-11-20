@@ -9,4 +9,5 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     createNote: (folderId, title, content) => electron_1.ipcRenderer.invoke('create-note', folderId, title, content),
     updateNote: (id, title, content) => electron_1.ipcRenderer.invoke('update-note', id, title, content),
     deleteNote: (id) => electron_1.ipcRenderer.invoke('delete-note', id),
+    askAI: (question) => electron_1.ipcRenderer.invoke('ask-ai', question),
 });

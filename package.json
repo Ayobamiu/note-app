@@ -13,10 +13,12 @@
     "electron:dev": "concurrently -k \"cross-env BROWSER=none npm run dev\" \"wait-on http://localhost:5173 && tsc -p tsconfig.electron.json && echo '{\\\"type\\\":\\\"commonjs\\\"}' > dist-electron/package.json && electron .\""
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@tiptap/extension-placeholder": "^3.11.0",
     "@tiptap/react": "^3.11.0",
     "@tiptap/starter-kit": "^3.11.0",
     "better-sqlite3": "^12.4.1",
+    "dotenv": "^17.2.3",
     "electron-squirrel-startup": "^1.0.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
 import path from 'path';
 import { initDB, getFolders, createFolder, deleteFolder, getNotes, createNote, updateNote, deleteNote } from './db';
+import { aiManager } from './ai/manager';
 
 // Initialize database
 initDB();
@@ -29,9 +30,66 @@ const createWindow = () => {
 
     // Note Handlers
     ipcMain.handle('get-notes', (event: IpcMainInvokeEvent, folderId: number) => getNotes(folderId));
-    ipcMain.handle('create-note', (event: IpcMainInvokeEvent, folderId: number, title: string, content: string) => createNote(folderId, title, content));
-    ipcMain.handle('update-note', (event: IpcMainInvokeEvent, id: number, title: string, content: string) => updateNote(id, title, content));
+    ipcMain.handle('create-note', async (event: IpcMainInvokeEvent, folderId: number, title: string, content: string) => {
+        const result = createNote(folderId, title, content);
+        const id = result.lastInsertRowid as number;
+
+        // Generate embedding in background
+        try {
+            const text = `${title}\n${content}`;
+            const embedding = await aiManager.getProvider().generateEmbedding(text);
+            if (embedding.length > 0) {
+                const { saveEmbedding } = await import('./db');
+                saveEmbedding(id, embedding);
+            }
+        } catch (error) {
+            console.error('Failed to generate embedding:', error);
+        }
+
+        return result;
+    });
+    ipcMain.handle('update-note', async (event: IpcMainInvokeEvent, id: number, title: string, content: string) => {
+        const result = updateNote(id, title, content);
+
+        // Update embedding in background
+        try {
+            const text = `${title}\n${content}`;
+            const embedding = await aiManager.getProvider().generateEmbedding(text);
+            if (embedding.length > 0) {
+                const { saveEmbedding } = await import('./db');
+                saveEmbedding(id, embedding);
+            }
+        } catch (error) {
+            console.error('Failed to update embedding:', error);
+        }
+
+        return result;
+    });
     ipcMain.handle('delete-note', (event: IpcMainInvokeEvent, id: number) => deleteNote(id));
+
+    // AI Handlers
+    ipcMain.handle('ask-ai', async (event: IpcMainInvokeEvent, question: string) => {
+        try {
+            const provider = aiManager.getProvider();
+
+            // 1. Embed question
+            const queryVector = await provider.generateEmbedding(question);
+
+            // 2. Search relevant notes
+            const { searchNotes } = await import('./db');
+            const relevantNotes = searchNotes(queryVector, 5);
+
+            // 3. Construct context
+            const context = relevantNotes.map((n: any) => `Title: ${n.title}\nContent: ${n.content}`).join('\n\n');
+
+            // 4. Generate answer
+            const answer = await provider.generateCompletion(question, context);
+            return answer;
+        } catch (error) {
+            console.error('AI Error:', error);
+            return "Sorry, I encountered an error while thinking.";
+        }
+    });
 
     // In production, load the index.html of the app.
     if (app.isPackaged) {

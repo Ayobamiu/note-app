@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { NoteList } from './components/NoteList';
 import { NoteEditor } from './components/NoteEditor';
+import { ChatInterface } from './components/ChatInterface';
 
 function App() {
   const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
@@ -12,7 +13,9 @@ function App() {
   const handleNoteUpdate = () => setRefreshKey(prev => prev + 1);
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 relative">
+      <ChatInterface />
+      
       <Sidebar 
         onSelectFolder={(id) => {
           setSelectedFolderId(id);

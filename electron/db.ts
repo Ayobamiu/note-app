@@ -82,3 +82,45 @@ export const deleteNote = (id: number) => {
   return stmt.run(id);
 };
 
+// Vector Operations
+export const saveEmbedding = (noteId: number, vector: number[]) => {
+  const stmt = db.prepare('INSERT OR REPLACE INTO embeddings (note_id, vector) VALUES (?, ?)');
+  // Store vector as JSON string for simplicity in MVP
+  return stmt.run(noteId, JSON.stringify(vector));
+};
+
+// Simple Cosine Similarity in JS (sufficient for < 1000 notes)
+function cosineSimilarity(vecA: number[], vecB: number[]): number {
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < vecA.length; i++) {
+    dotProduct += vecA[i] * vecB[i];
+    normA += vecA[i] * vecA[i];
+    normB += vecB[i] * vecB[i];
+  }
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+export const searchNotes = (queryVector: number[], limit: number = 5) => {
+  const stmt = db.prepare(`
+    SELECT notes.*, embeddings.vector 
+    FROM notes 
+    JOIN embeddings ON notes.id = embeddings.note_id
+  `);
+  const allNotes = stmt.all();
+
+  const scoredNotes = allNotes.map((note: any) => {
+    const vector = JSON.parse(note.vector);
+    return {
+      ...note,
+      score: cosineSimilarity(queryVector, vector)
+    };
+  });
+
+  // Sort by score descending
+  scoredNotes.sort((a: any, b: any) => b.score - a.score);
+
+  return scoredNotes.slice(0, limit);
+};
+
