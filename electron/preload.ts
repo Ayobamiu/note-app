@@ -11,4 +11,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
     deleteNote: (id: number) => ipcRenderer.invoke('delete-note', id),
 
     askAI: (question: string) => ipcRenderer.invoke('ask-ai', question),
+    getReminders: (noteId: number) => ipcRenderer.invoke('get-reminders', noteId),
 });

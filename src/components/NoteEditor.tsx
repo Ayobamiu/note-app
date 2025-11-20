@@ -3,6 +3,8 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 
+import { ReminderList } from './ReminderList';
+
 interface NoteEditorProps {
   note: Note;
   onUpdate: () => void;
@@ -54,6 +56,8 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate }) => {
   return (
     <div className="flex-1 h-full flex flex-col bg-white">
       <div className="p-8 max-w-3xl mx-auto w-full">
+        <ReminderList noteId={note.id} />
+        
         <input
           type="text"
           value={title}

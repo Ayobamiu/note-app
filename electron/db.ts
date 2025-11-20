@@ -11,35 +11,38 @@ db.pragma('journal_mode = WAL');
 export function initDB() {
   // Create folders table
   db.exec(`
-    CREATE TABLE IF NOT EXISTS folders (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+        CREATE TABLE IF NOT EXISTS folders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
 
-  // Create notes table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS notes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      folder_id INTEGER,
-      title TEXT,
-      content TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (folder_id) REFERENCES folders (id)
-    )
-  `);
+        CREATE TABLE IF NOT EXISTS notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            folder_id INTEGER,
+            title TEXT,
+            content TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(folder_id) REFERENCES folders(id) ON DELETE CASCADE
+        );
 
-  // Create embeddings table (placeholder for now)
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS embeddings (
-      note_id INTEGER PRIMARY KEY,
-      vector BLOB,
-      FOREIGN KEY (note_id) REFERENCES notes (id)
-    )
-  `);
+        CREATE TABLE IF NOT EXISTS embeddings (
+            note_id INTEGER PRIMARY KEY,
+            vector TEXT,
+            FOREIGN KEY(note_id) REFERENCES notes(id) ON DELETE CASCADE
+        );
 
+        CREATE TABLE IF NOT EXISTS reminders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            note_id INTEGER,
+            text TEXT NOT NULL,
+            due_date TEXT,
+            status TEXT DEFAULT 'pending', -- pending, accepted, dismissed
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(note_id) REFERENCES notes(id) ON DELETE CASCADE
+        );
+    `);
   console.log('Database initialized at', dbPath);
 }
 
@@ -122,5 +125,26 @@ export const searchNotes = (queryVector: number[], limit: number = 5) => {
   scoredNotes.sort((a: any, b: any) => b.score - a.score);
 
   return scoredNotes.slice(0, limit);
+};
+
+// Reminder Operations
+export const getReminders = (noteId: number) => {
+  const stmt = db.prepare("SELECT * FROM reminders WHERE note_id = ? AND status = 'pending'");
+  return stmt.all(noteId);
+};
+
+export const createReminder = (noteId: number, text: string, dueDate: string | null) => {
+  const stmt = db.prepare('INSERT INTO reminders (note_id, text, due_date) VALUES (?, ?, ?)');
+  return stmt.run(noteId, text, dueDate);
+};
+
+export const updateReminderStatus = (id: number, status: string) => {
+  const stmt = db.prepare('UPDATE reminders SET status = ? WHERE id = ?');
+  return stmt.run(status, id);
+};
+
+export const clearPendingReminders = (noteId: number) => {
+  const stmt = db.prepare("DELETE FROM reminders WHERE note_id = ? AND status = 'pending'");
+  return stmt.run(noteId);
 };
 

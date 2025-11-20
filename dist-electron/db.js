@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.searchNotes = exports.saveEmbedding = exports.deleteNote = exports.updateNote = exports.createNote = exports.getNotes = exports.deleteFolder = exports.createFolder = exports.getFolders = void 0;
+exports.clearPendingReminders = exports.updateReminderStatus = exports.createReminder = exports.getReminders = exports.searchNotes = exports.saveEmbedding = exports.deleteNote = exports.updateNote = exports.createNote = exports.getNotes = exports.deleteFolder = exports.createFolder = exports.getFolders = void 0;
 exports.initDB = initDB;
 const better_sqlite3_1 = __importDefault(require("better-sqlite3"));
 const path_1 = __importDefault(require("path"));
@@ -15,32 +15,38 @@ db.pragma('journal_mode = WAL');
 function initDB() {
     // Create folders table
     db.exec(`
-    CREATE TABLE IF NOT EXISTS folders (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-    // Create notes table
-    db.exec(`
-    CREATE TABLE IF NOT EXISTS notes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      folder_id INTEGER,
-      title TEXT,
-      content TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (folder_id) REFERENCES folders (id)
-    )
-  `);
-    // Create embeddings table (placeholder for now)
-    db.exec(`
-    CREATE TABLE IF NOT EXISTS embeddings (
-      note_id INTEGER PRIMARY KEY,
-      vector BLOB,
-      FOREIGN KEY (note_id) REFERENCES notes (id)
-    )
-  `);
+        CREATE TABLE IF NOT EXISTS folders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            folder_id INTEGER,
+            title TEXT,
+            content TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(folder_id) REFERENCES folders(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS embeddings (
+            note_id INTEGER PRIMARY KEY,
+            vector TEXT,
+            FOREIGN KEY(note_id) REFERENCES notes(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS reminders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            note_id INTEGER,
+            text TEXT NOT NULL,
+            due_date TEXT,
+            status TEXT DEFAULT 'pending', -- pending, accepted, dismissed
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(note_id) REFERENCES notes(id) ON DELETE CASCADE
+        );
+    `);
     console.log('Database initialized at', dbPath);
 }
 exports.default = db;
@@ -119,3 +125,24 @@ const searchNotes = (queryVector, limit = 5) => {
     return scoredNotes.slice(0, limit);
 };
 exports.searchNotes = searchNotes;
+// Reminder Operations
+const getReminders = (noteId) => {
+    const stmt = db.prepare("SELECT * FROM reminders WHERE note_id = ? AND status = 'pending'");
+    return stmt.all(noteId);
+};
+exports.getReminders = getReminders;
+const createReminder = (noteId, text, dueDate) => {
+    const stmt = db.prepare('INSERT INTO reminders (note_id, text, due_date) VALUES (?, ?, ?)');
+    return stmt.run(noteId, text, dueDate);
+};
+exports.createReminder = createReminder;
+const updateReminderStatus = (id, status) => {
+    const stmt = db.prepare('UPDATE reminders SET status = ? WHERE id = ?');
+    return stmt.run(status, id);
+};
+exports.updateReminderStatus = updateReminderStatus;
+const clearPendingReminders = (noteId) => {
+    const stmt = db.prepare("DELETE FROM reminders WHERE note_id = ? AND status = 'pending'");
+    return stmt.run(noteId);
+};
+exports.clearPendingReminders = clearPendingReminders;

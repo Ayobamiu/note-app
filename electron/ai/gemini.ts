@@ -33,4 +33,43 @@ export class GeminiProvider implements AIProvider {
         const response = await result.response;
         return response.text();
     }
+
+    async extractReminders(text: string): Promise<{ text: string; due_date: string | null }[]> {
+        const currentDate = new Date().toISOString().split('T')[0];
+        console.log('Extracting reminders for text:', text);
+        console.log('Current Date Context:', currentDate);
+
+        const prompt = `
+      Analyze the following note content and extract any actionable reminders, tasks, or events (like meetings).
+      
+      Context: Today is ${currentDate}.
+      
+      Return a JSON array of objects with:
+      - "text": The description of the reminder/task.
+      - "due_date": The date in YYYY-MM-DD format. If a specific date is mentioned (e.g. "Nov 24"), use the current year (${new Date().getFullYear()}) unless specified otherwise. If relative (e.g. "tomorrow"), calculate it based on today's date. If no date is mentioned, use null.
+      
+      If no reminders are found, return an empty array [].
+      
+      Note Content:
+      ${text}
+      
+      Output JSON only:
+    `;
+
+        try {
+            const result = await this.model.generateContent(prompt);
+            const response = await result.response;
+            const textResponse = response.text();
+            console.log('AI Raw Response:', textResponse);
+
+            // Clean up markdown code blocks if present
+            const jsonStr = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+            const parsed = JSON.parse(jsonStr);
+            console.log('Parsed Reminders:', parsed);
+            return parsed;
+        } catch (error) {
+            console.error('Error extracting reminders:', error);
+            return [];
+        }
+    }
 }

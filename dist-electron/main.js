@@ -66,37 +66,61 @@ const createWindow = () => {
     electron_1.ipcMain.handle('create-note', async (event, folderId, title, content) => {
         const result = (0, db_1.createNote)(folderId, title, content);
         const id = result.lastInsertRowid;
-        // Generate embedding in background
+        // Generate embedding and reminders in background
         try {
             const text = `${title}\n${content}`;
-            const embedding = await manager_1.aiManager.getProvider().generateEmbedding(text);
+            const provider = manager_1.aiManager.getProvider();
+            // Embeddings
+            const embedding = await provider.generateEmbedding(text);
             if (embedding.length > 0) {
                 const { saveEmbedding } = await Promise.resolve().then(() => __importStar(require('./db')));
                 saveEmbedding(id, embedding);
             }
+            // Reminders
+            const reminders = await provider.extractReminders(text);
+            if (reminders.length > 0) {
+                const { createReminder } = await Promise.resolve().then(() => __importStar(require('./db')));
+                reminders.forEach(r => createReminder(id, r.text, r.due_date));
+            }
         }
         catch (error) {
-            console.error('Failed to generate embedding:', error);
+            console.error('Failed to generate AI metadata:', error);
         }
         return result;
     });
     electron_1.ipcMain.handle('update-note', async (event, id, title, content) => {
+        console.log(`[IPC] update-note called for id: ${id}`);
         const result = (0, db_1.updateNote)(id, title, content);
-        // Update embedding in background
+        // Update embedding and reminders in background
         try {
             const text = `${title}\n${content}`;
-            const embedding = await manager_1.aiManager.getProvider().generateEmbedding(text);
+            console.log('[AI] Getting provider...');
+            const provider = manager_1.aiManager.getProvider();
+            // Embeddings
+            console.log('[AI] Generating embedding...');
+            const embedding = await provider.generateEmbedding(text);
             if (embedding.length > 0) {
                 const { saveEmbedding } = await Promise.resolve().then(() => __importStar(require('./db')));
                 saveEmbedding(id, embedding);
             }
+            // Reminders
+            console.log('[AI] Extracting reminders...');
+            const reminders = await provider.extractReminders(text);
+            console.log(`[AI] Extracted ${reminders.length} reminders`);
+            if (reminders.length > 0) {
+                const { createReminder, clearPendingReminders } = await Promise.resolve().then(() => __importStar(require('./db')));
+                // Clear existing pending reminders to avoid duplicates
+                clearPendingReminders(id);
+                reminders.forEach(r => createReminder(id, r.text, r.due_date));
+            }
         }
         catch (error) {
-            console.error('Failed to update embedding:', error);
+            console.error('Failed to update AI metadata:', error);
         }
         return result;
     });
     electron_1.ipcMain.handle('delete-note', (event, id) => (0, db_1.deleteNote)(id));
+    electron_1.ipcMain.handle('get-reminders', (event, noteId) => (0, db_1.getReminders)(noteId));
     // AI Handlers
     electron_1.ipcMain.handle('ask-ai', async (event, question) => {
         try {

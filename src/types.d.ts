@@ -16,6 +16,14 @@ declare global {
         updated_at: string;
     }
 
+    interface Reminder {
+        id: number;
+        note_id: number;
+        text: string;
+        due_date: string | null;
+        status: 'pending' | 'accepted' | 'dismissed';
+    }
+
     interface Window {
         electronAPI: {
             getFolders: () => Promise<Folder[]>;
@@ -28,6 +36,7 @@ declare global {
             deleteNote: (id: number) => Promise<void>;
 
             askAI: (question: string) => Promise<string>;
+            getReminders: (noteId: number) => Promise<Reminder[]>;
         };
     }
 }

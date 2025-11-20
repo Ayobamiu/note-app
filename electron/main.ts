@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
 import path from 'path';
-import { initDB, getFolders, createFolder, deleteFolder, getNotes, createNote, updateNote, deleteNote } from './db';
+import { initDB, getFolders, createFolder, deleteFolder, getNotes, createNote, updateNote, deleteNote, getReminders, createReminder, updateReminderStatus, clearPendingReminders } from './db';
 import { aiManager } from './ai/manager';
 
 // Initialize database
@@ -34,38 +34,67 @@ const createWindow = () => {
         const result = createNote(folderId, title, content);
         const id = result.lastInsertRowid as number;
 
-        // Generate embedding in background
+        // Generate embedding and reminders in background
         try {
             const text = `${title}\n${content}`;
-            const embedding = await aiManager.getProvider().generateEmbedding(text);
+            const provider = aiManager.getProvider();
+
+            // Embeddings
+            const embedding = await provider.generateEmbedding(text);
             if (embedding.length > 0) {
                 const { saveEmbedding } = await import('./db');
                 saveEmbedding(id, embedding);
             }
+
+            // Reminders
+            const reminders = await provider.extractReminders(text);
+            if (reminders.length > 0) {
+                const { createReminder } = await import('./db');
+                reminders.forEach(r => createReminder(id, r.text, r.due_date));
+            }
         } catch (error) {
-            console.error('Failed to generate embedding:', error);
+            console.error('Failed to generate AI metadata:', error);
         }
 
         return result;
     });
     ipcMain.handle('update-note', async (event: IpcMainInvokeEvent, id: number, title: string, content: string) => {
+        console.log(`[IPC] update-note called for id: ${id}`);
         const result = updateNote(id, title, content);
 
-        // Update embedding in background
+        // Update embedding and reminders in background
         try {
             const text = `${title}\n${content}`;
-            const embedding = await aiManager.getProvider().generateEmbedding(text);
+            console.log('[AI] Getting provider...');
+            const provider = aiManager.getProvider();
+
+            // Embeddings
+            console.log('[AI] Generating embedding...');
+            const embedding = await provider.generateEmbedding(text);
             if (embedding.length > 0) {
                 const { saveEmbedding } = await import('./db');
                 saveEmbedding(id, embedding);
             }
+
+            // Reminders
+            console.log('[AI] Extracting reminders...');
+            const reminders = await provider.extractReminders(text);
+            console.log(`[AI] Extracted ${reminders.length} reminders`);
+
+            if (reminders.length > 0) {
+                const { createReminder, clearPendingReminders } = await import('./db');
+                // Clear existing pending reminders to avoid duplicates
+                clearPendingReminders(id);
+                reminders.forEach(r => createReminder(id, r.text, r.due_date));
+            }
         } catch (error) {
-            console.error('Failed to update embedding:', error);
+            console.error('Failed to update AI metadata:', error);
         }
 
         return result;
     });
     ipcMain.handle('delete-note', (event: IpcMainInvokeEvent, id: number) => deleteNote(id));
+    ipcMain.handle('get-reminders', (event: IpcMainInvokeEvent, noteId: number) => getReminders(noteId));
 
     // AI Handlers
     ipcMain.handle('ask-ai', async (event: IpcMainInvokeEvent, question: string) => {
