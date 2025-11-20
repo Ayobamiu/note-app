@@ -37,7 +37,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate }) => {
     content: note.content,
     editorProps: {
       attributes: {
-        class: 'prose prose-zinc prose-lg max-w-none focus:outline-none min-h-[500px] selection:bg-zinc-200',
+        class: 'prose prose-zinc max-w-none focus:outline-none min-h-[500px] selection:bg-zinc-200 prose-p:leading-relaxed prose-headings:mb-2 prose-headings:mt-4 prose-p:my-1',
       },
     },
     onUpdate: async ({ editor }) => {
