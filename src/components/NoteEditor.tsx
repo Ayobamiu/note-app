@@ -2,7 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
-
+import BubbleMenuExtension from '@tiptap/extension-bubble-menu';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
 import { ReminderList } from './ReminderList';
 
 interface NoteEditorProps {
@@ -19,11 +23,18 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate }) => {
       Placeholder.configure({
         placeholder: 'Start writing...',
       }),
+      BubbleMenuExtension,
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     content: note.content,
     editorProps: {
       attributes: {
-        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[500px]',
+        class: 'prose prose-zinc prose-lg max-w-none focus:outline-none min-h-[500px] selection:bg-zinc-200',
       },
     },
     onUpdate: async ({ editor }) => {
@@ -54,17 +65,18 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate }) => {
   };
 
   return (
-    <div className="flex-1 h-full flex flex-col bg-white">
-      <div className="p-8 max-w-3xl mx-auto w-full">
+    <div className="flex-1 h-full flex flex-col bg-white overflow-y-auto">
+      <div className="max-w-3xl mx-auto w-full py-12 px-8">
         <ReminderList noteId={note.id} />
         
         <input
           type="text"
           value={title}
           onChange={handleTitleChange}
-          placeholder="Note Title"
-          className="text-4xl font-bold text-gray-900 placeholder-gray-300 border-none focus:outline-none w-full mb-8"
+          placeholder="Untitled"
+          className="text-4xl font-bold text-zinc-900 placeholder-zinc-300 border-none focus:outline-none w-full mb-8 bg-transparent"
         />
+        
         <EditorContent editor={editor} />
       </div>
     </div>

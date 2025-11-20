@@ -1,14 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-}
+import { MessageSquare, X, Send, Sparkles } from 'lucide-react';
+import clsx from 'clsx';
 
 export const ChatInterface: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
+  const [query, setQuery] = useState('');
+  const [messages, setMessages] = useState<{ role: 'user' | 'ai'; content: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -22,97 +19,105 @@ export const ChatInterface: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!query.trim() || isLoading) return;
 
-    const userMessage = input;
-    setInput('');
+    const userMessage = query;
+    setQuery('');
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
 
     try {
       const response = await window.electronAPI.askAI(userMessage);
-      setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+      setMessages(prev => [...prev, { role: 'ai', content: response }]);
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, something went wrong.' }]);
+      setMessages(prev => [...prev, { role: 'ai', content: "Sorry, I couldn't reach the brain. Try again." }]);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className={`fixed bottom-4 right-4 flex flex-col items-end z-50 ${isOpen ? 'w-96' : 'w-auto'}`}>
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
       {isOpen && (
-        <div className="bg-white rounded-lg shadow-xl border border-gray-200 w-full mb-4 flex flex-col h-[500px]">
-          <div className="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg flex justify-between items-center">
-            <h3 className="font-semibold text-gray-700">Chat with Notes</h3>
-            <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-gray-600">
-              ×
+        <div className="mb-4 w-96 h-[500px] bg-white/80 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl flex flex-col overflow-hidden ring-1 ring-black/5">
+          {/* Header */}
+          <div className="p-4 border-b border-zinc-200/50 bg-white/50 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-zinc-800">
+              <Sparkles size={18} className="text-purple-500" />
+              <h3 className="font-semibold text-sm">Ask your notes</h3>
+            </div>
+            <button 
+              onClick={() => setIsOpen(false)}
+              className="p-1 hover:bg-zinc-200/50 rounded-full transition-colors text-zinc-500"
+            >
+              <X size={16} />
             </button>
           </div>
-          
+
+          {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.length === 0 && (
-              <p className="text-center text-gray-400 text-sm mt-10">
-                Ask me anything about your notes!
-              </p>
+              <div className="h-full flex flex-col items-center justify-center text-zinc-400 text-center p-4">
+                <Sparkles size={32} className="mb-2 opacity-20" />
+                <p className="text-sm">Ask me anything about your notes...</p>
+              </div>
             )}
             {messages.map((msg, idx) => (
               <div
                 key={idx}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={clsx(
+                  "max-w-[85%] p-3 text-sm rounded-2xl shadow-sm",
+                  msg.role === 'user'
+                    ? "bg-zinc-900 text-white self-end ml-auto rounded-br-none"
+                    : "bg-white text-zinc-800 self-start mr-auto border border-zinc-100 rounded-bl-none"
+                )}
               >
-                <div
-                  className={`max-w-[80%] rounded-lg p-3 text-sm ${
-                    msg.role === 'user'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}
-                >
-                  {msg.content}
-                </div>
+                {msg.content}
               </div>
             ))}
             {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-gray-100 rounded-lg p-3 text-sm text-gray-500">
-                  Thinking...
-                </div>
+              <div className="bg-white border border-zinc-100 text-zinc-500 self-start mr-auto p-3 rounded-2xl rounded-bl-none text-sm flex items-center gap-2 shadow-sm">
+                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" />
+                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce [animation-delay:0.2s]" />
+                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce [animation-delay:0.4s]" />
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200">
-            <div className="flex gap-2">
+          {/* Input */}
+          <form onSubmit={handleSubmit} className="p-3 bg-white/50 border-t border-zinc-200/50">
+            <div className="relative flex items-center">
               <input
                 type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask a question..."
-                className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Type a question..."
+                className="w-full pl-4 pr-10 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 shadow-sm"
               />
               <button
                 type="submit"
-                disabled={isLoading}
-                className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+                disabled={!query.trim() || isLoading}
+                className="absolute right-2 p-1.5 bg-zinc-900 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-800 transition-colors"
               >
-                Send
+                <Send size={14} />
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-all"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-          </svg>
-        </button>
-      )}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={clsx(
+          "p-4 rounded-full shadow-lg transition-all duration-300 hover:scale-105 active:scale-95",
+          isOpen 
+            ? "bg-zinc-200 text-zinc-600 rotate-90" 
+            : "bg-zinc-900 text-white hover:bg-zinc-800"
+        )}
+      >
+        {isOpen ? <X size={24} /> : <MessageSquare size={24} />}
+      </button>
     </div>
   );
 };
