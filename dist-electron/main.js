@@ -27,6 +27,11 @@ const createWindow = () => {
     electron_1.ipcMain.handle('get-folders', () => (0, db_1.getFolders)());
     electron_1.ipcMain.handle('create-folder', (event, name) => (0, db_1.createFolder)(name));
     electron_1.ipcMain.handle('delete-folder', (event, id) => (0, db_1.deleteFolder)(id));
+    // Note Handlers
+    electron_1.ipcMain.handle('get-notes', (event, folderId) => (0, db_1.getNotes)(folderId));
+    electron_1.ipcMain.handle('create-note', (event, folderId, title, content) => (0, db_1.createNote)(folderId, title, content));
+    electron_1.ipcMain.handle('update-note', (event, id, title, content) => (0, db_1.updateNote)(id, title, content));
+    electron_1.ipcMain.handle('delete-note', (event, id) => (0, db_1.deleteNote)(id));
     // In production, load the index.html of the app.
     if (electron_1.app.isPackaged) {
         mainWindow.loadFile(path_1.default.join(__dirname, '../dist/index.html'));

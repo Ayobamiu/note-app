@@ -21,6 +21,11 @@ declare global {
             getFolders: () => Promise<Folder[]>;
             createFolder: (name: string) => Promise<void>;
             deleteFolder: (id: number) => Promise<void>;
+
+            getNotes: (folderId: number) => Promise<Note[]>;
+            createNote: (folderId: number, title: string, content: string) => Promise<void>;
+            updateNote: (id: number, title: string, content: string) => Promise<void>;
+            deleteNote: (id: number) => Promise<void>;
         };
     }
 }

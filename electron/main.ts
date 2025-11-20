@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
 import path from 'path';
-import { initDB, getFolders, createFolder, deleteFolder } from './db';
+import { initDB, getFolders, createFolder, deleteFolder, getNotes, createNote, updateNote, deleteNote } from './db';
 
 // Initialize database
 initDB();
@@ -26,6 +26,12 @@ const createWindow = () => {
     ipcMain.handle('get-folders', () => getFolders());
     ipcMain.handle('create-folder', (event: IpcMainInvokeEvent, name: string) => createFolder(name));
     ipcMain.handle('delete-folder', (event: IpcMainInvokeEvent, id: number) => deleteFolder(id));
+
+    // Note Handlers
+    ipcMain.handle('get-notes', (event: IpcMainInvokeEvent, folderId: number) => getNotes(folderId));
+    ipcMain.handle('create-note', (event: IpcMainInvokeEvent, folderId: number, title: string, content: string) => createNote(folderId, title, content));
+    ipcMain.handle('update-note', (event: IpcMainInvokeEvent, id: number, title: string, content: string) => updateNote(id, title, content));
+    ipcMain.handle('delete-note', (event: IpcMainInvokeEvent, id: number) => deleteNote(id));
 
     // In production, load the index.html of the app.
     if (app.isPackaged) {

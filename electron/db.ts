@@ -61,3 +61,24 @@ export const deleteFolder = (id: number) => {
   return stmt.run(id);
 };
 
+// Note Operations
+export const getNotes = (folderId: number) => {
+  const stmt = db.prepare('SELECT * FROM notes WHERE folder_id = ? ORDER BY updated_at DESC');
+  return stmt.all(folderId);
+};
+
+export const createNote = (folderId: number, title: string, content: string) => {
+  const stmt = db.prepare('INSERT INTO notes (folder_id, title, content) VALUES (?, ?, ?)');
+  return stmt.run(folderId, title, content);
+};
+
+export const updateNote = (id: number, title: string, content: string) => {
+  const stmt = db.prepare('UPDATE notes SET title = ?, content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?');
+  return stmt.run(title, content, id);
+};
+
+export const deleteNote = (id: number) => {
+  const stmt = db.prepare('DELETE FROM notes WHERE id = ?');
+  return stmt.run(id);
+};
+

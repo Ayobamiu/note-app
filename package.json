@@ -13,6 +13,9 @@
     "electron:dev": "concurrently -k \"cross-env BROWSER=none npm run dev\" \"wait-on http://localhost:5173 && tsc -p tsconfig.electron.json && echo '{\\\"type\\\":\\\"commonjs\\\"}' > dist-electron/package.json && electron .\""
   },
   "dependencies": {
+    "@tiptap/extension-placeholder": "^3.11.0",
+    "@tiptap/react": "^3.11.0",
+    "@tiptap/starter-kit": "^3.11.0",
     "better-sqlite3": "^12.4.1",
     "electron-squirrel-startup": "^1.0.1",
     "react": "^19.2.0",
@@ -20,6 +23,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.1.17",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^24.10.0",

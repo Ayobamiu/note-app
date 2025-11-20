@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteFolder = exports.createFolder = exports.getFolders = void 0;
+exports.deleteNote = exports.updateNote = exports.createNote = exports.getNotes = exports.deleteFolder = exports.createFolder = exports.getFolders = void 0;
 exports.initDB = initDB;
 const better_sqlite3_1 = __importDefault(require("better-sqlite3"));
 const path_1 = __importDefault(require("path"));
@@ -60,3 +60,24 @@ const deleteFolder = (id) => {
     return stmt.run(id);
 };
 exports.deleteFolder = deleteFolder;
+// Note Operations
+const getNotes = (folderId) => {
+    const stmt = db.prepare('SELECT * FROM notes WHERE folder_id = ? ORDER BY updated_at DESC');
+    return stmt.all(folderId);
+};
+exports.getNotes = getNotes;
+const createNote = (folderId, title, content) => {
+    const stmt = db.prepare('INSERT INTO notes (folder_id, title, content) VALUES (?, ?, ?)');
+    return stmt.run(folderId, title, content);
+};
+exports.createNote = createNote;
+const updateNote = (id, title, content) => {
+    const stmt = db.prepare('UPDATE notes SET title = ?, content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?');
+    return stmt.run(title, content, id);
+};
+exports.updateNote = updateNote;
+const deleteNote = (id) => {
+    const stmt = db.prepare('DELETE FROM notes WHERE id = ?');
+    return stmt.run(id);
+};
+exports.deleteNote = deleteNote;
