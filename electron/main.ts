@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
 import path from 'path';
-import { initDB, getFolders, createFolder, updateFolder, deleteFolder, getNotes, createNote, updateNote, deleteNote, getReminders, createReminder, updateReminderStatus, clearPendingReminders } from './db';
+import { initDB, getFolders, createFolder, updateFolder, deleteFolder, getNotes, createNote, updateNote, deleteNote, getReminders, createReminder, updateReminderStatus, clearPendingReminders, createConversation, getConversations, getConversation, updateConversationTitle, deleteConversation, saveMessage, getMessages, linkConversationToNotes } from './db';
 import { aiManager } from './ai/manager';
 
 // Initialize database
@@ -99,7 +99,7 @@ const createWindow = () => {
     ipcMain.handle('update-reminder-status', (event: IpcMainInvokeEvent, id: number, status: 'pending' | 'accepted' | 'dismissed') => updateReminderStatus(id, status));
 
     // AI Handlers
-    ipcMain.handle('ask-ai', async (event: IpcMainInvokeEvent, question: string) => {
+    ipcMain.handle('ask-ai', async (event: IpcMainInvokeEvent, question: string, conversationId: number | null = null) => {
         try {
             const provider = aiManager.getProvider();
 
@@ -109,18 +109,59 @@ const createWindow = () => {
             // 2. Search relevant notes
             const { searchNotes } = await import('./db');
             const relevantNotes = searchNotes(queryVector, 5);
+            const noteIds = relevantNotes.map((n: any) => n.id);
 
             // 3. Construct context
             const context = relevantNotes.map((n: any) => `Title: ${n.title}\nContent: ${n.content}`).join('\n\n');
 
             // 4. Generate answer
             const answer = await provider.generateCompletion(question, context);
-            return answer;
+
+            // 5. Create or get conversation
+            let currentConversationId = conversationId;
+            if (!currentConversationId) {
+                // Auto-generate title from first 50 chars of question
+                const title = question.length > 50 ? question.substring(0, 50) + '...' : question;
+                const result = createConversation(title);
+                currentConversationId = result.lastInsertRowid as number;
+            }
+
+            // 6. Save messages
+            saveMessage(currentConversationId, 'user', question);
+            saveMessage(currentConversationId, 'ai', answer);
+
+            // 7. Link relevant notes to conversation
+            if (noteIds.length > 0) {
+                linkConversationToNotes(currentConversationId, noteIds);
+            }
+
+            // 8. Update conversation timestamp (refresh updated_at)
+            const currentConversation = getConversation(currentConversationId);
+            if (currentConversation) {
+                updateConversationTitle(currentConversationId, (currentConversation as any).title);
+            }
+
+            return { answer, conversationId: currentConversationId };
         } catch (error) {
             console.error('AI Error:', error);
-            return "Sorry, I encountered an error while thinking.";
+            return { answer: "Sorry, I encountered an error while thinking.", conversationId: null };
         }
     });
+
+    // Conversation Handlers
+    ipcMain.handle('get-conversations', () => getConversations());
+    ipcMain.handle('get-conversation', (event: IpcMainInvokeEvent, id: number) => getConversation(id));
+    ipcMain.handle('create-conversation', (event: IpcMainInvokeEvent, title: string) => {
+        const result = createConversation(title);
+        return { id: result.lastInsertRowid };
+    });
+    ipcMain.handle('update-conversation-title', (event: IpcMainInvokeEvent, id: number, title: string) => {
+        return updateConversationTitle(id, title);
+    });
+    ipcMain.handle('delete-conversation', (event: IpcMainInvokeEvent, id: number) => {
+        return deleteConversation(id);
+    });
+    ipcMain.handle('get-messages', (event: IpcMainInvokeEvent, conversationId: number) => getMessages(conversationId));
 
     // In production, load the index.html of the app.
     if (app.isPackaged) {

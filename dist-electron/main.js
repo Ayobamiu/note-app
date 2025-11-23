@@ -124,7 +124,7 @@ const createWindow = () => {
     electron_1.ipcMain.handle('get-reminders', (event, noteId) => (0, db_1.getReminders)(noteId));
     electron_1.ipcMain.handle('update-reminder-status', (event, id, status) => (0, db_1.updateReminderStatus)(id, status));
     // AI Handlers
-    electron_1.ipcMain.handle('ask-ai', async (event, question) => {
+    electron_1.ipcMain.handle('ask-ai', async (event, question, conversationId = null) => {
         try {
             const provider = manager_1.aiManager.getProvider();
             // 1. Embed question
@@ -132,17 +132,52 @@ const createWindow = () => {
             // 2. Search relevant notes
             const { searchNotes } = await Promise.resolve().then(() => __importStar(require('./db')));
             const relevantNotes = searchNotes(queryVector, 5);
+            const noteIds = relevantNotes.map((n) => n.id);
             // 3. Construct context
             const context = relevantNotes.map((n) => `Title: ${n.title}\nContent: ${n.content}`).join('\n\n');
             // 4. Generate answer
             const answer = await provider.generateCompletion(question, context);
-            return answer;
+            // 5. Create or get conversation
+            let currentConversationId = conversationId;
+            if (!currentConversationId) {
+                // Auto-generate title from first 50 chars of question
+                const title = question.length > 50 ? question.substring(0, 50) + '...' : question;
+                const result = (0, db_1.createConversation)(title);
+                currentConversationId = result.lastInsertRowid;
+            }
+            // 6. Save messages
+            (0, db_1.saveMessage)(currentConversationId, 'user', question);
+            (0, db_1.saveMessage)(currentConversationId, 'ai', answer);
+            // 7. Link relevant notes to conversation
+            if (noteIds.length > 0) {
+                (0, db_1.linkConversationToNotes)(currentConversationId, noteIds);
+            }
+            // 8. Update conversation timestamp (refresh updated_at)
+            const currentConversation = (0, db_1.getConversation)(currentConversationId);
+            if (currentConversation) {
+                (0, db_1.updateConversationTitle)(currentConversationId, currentConversation.title);
+            }
+            return { answer, conversationId: currentConversationId };
         }
         catch (error) {
             console.error('AI Error:', error);
-            return "Sorry, I encountered an error while thinking.";
+            return { answer: "Sorry, I encountered an error while thinking.", conversationId: null };
         }
     });
+    // Conversation Handlers
+    electron_1.ipcMain.handle('get-conversations', () => (0, db_1.getConversations)());
+    electron_1.ipcMain.handle('get-conversation', (event, id) => (0, db_1.getConversation)(id));
+    electron_1.ipcMain.handle('create-conversation', (event, title) => {
+        const result = (0, db_1.createConversation)(title);
+        return { id: result.lastInsertRowid };
+    });
+    electron_1.ipcMain.handle('update-conversation-title', (event, id, title) => {
+        return (0, db_1.updateConversationTitle)(id, title);
+    });
+    electron_1.ipcMain.handle('delete-conversation', (event, id) => {
+        return (0, db_1.deleteConversation)(id);
+    });
+    electron_1.ipcMain.handle('get-messages', (event, conversationId) => (0, db_1.getMessages)(conversationId));
     // In production, load the index.html of the app.
     if (electron_1.app.isPackaged) {
         mainWindow.loadFile(path_1.default.join(__dirname, '../dist/index.html'));

@@ -42,6 +42,30 @@ export function initDB() {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(note_id) REFERENCES notes(id) ON DELETE CASCADE
         );
+
+        CREATE TABLE IF NOT EXISTS conversations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS chat_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conversation_id INTEGER,
+            role TEXT NOT NULL, -- 'user' or 'ai'
+            content TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS conversation_notes (
+            conversation_id INTEGER,
+            note_id INTEGER,
+            FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+            FOREIGN KEY(note_id) REFERENCES notes(id) ON DELETE CASCADE,
+            PRIMARY KEY (conversation_id, note_id)
+        );
     `);
   console.log('Database initialized at', dbPath);
 }
@@ -151,5 +175,63 @@ export const updateReminderStatus = (id: number, status: string) => {
 export const clearPendingReminders = (noteId: number) => {
   const stmt = db.prepare("DELETE FROM reminders WHERE note_id = ? AND status = 'pending'");
   return stmt.run(noteId);
+};
+
+// Conversation Operations
+export const createConversation = (title: string) => {
+  const stmt = db.prepare('INSERT INTO conversations (title) VALUES (?)');
+  return stmt.run(title);
+};
+
+export const getConversations = () => {
+  const stmt = db.prepare('SELECT * FROM conversations ORDER BY updated_at DESC');
+  return stmt.all();
+};
+
+export const getConversation = (id: number) => {
+  const stmt = db.prepare('SELECT * FROM conversations WHERE id = ?');
+  return stmt.get(id);
+};
+
+export const updateConversationTitle = (id: number, title: string) => {
+  const stmt = db.prepare('UPDATE conversations SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?');
+  return stmt.run(title, id);
+};
+
+export const deleteConversation = (id: number) => {
+  const stmt = db.prepare('DELETE FROM conversations WHERE id = ?');
+  return stmt.run(id);
+};
+
+// Message Operations
+export const saveMessage = (conversationId: number, role: 'user' | 'ai', content: string) => {
+  const stmt = db.prepare('INSERT INTO chat_messages (conversation_id, role, content) VALUES (?, ?, ?)');
+  return stmt.run(conversationId, role, content);
+};
+
+export const getMessages = (conversationId: number) => {
+  const stmt = db.prepare('SELECT * FROM chat_messages WHERE conversation_id = ? ORDER BY created_at ASC');
+  return stmt.all(conversationId);
+};
+
+// Conversation Notes Operations (for tracking which notes were used)
+export const linkConversationToNotes = (conversationId: number, noteIds: number[]) => {
+  const stmt = db.prepare('INSERT OR IGNORE INTO conversation_notes (conversation_id, note_id) VALUES (?, ?)');
+  const insertMany = db.transaction((ids: number[]) => {
+    for (const noteId of ids) {
+      stmt.run(conversationId, noteId);
+    }
+  });
+  insertMany(noteIds);
+};
+
+export const getConversationNotes = (conversationId: number) => {
+  const stmt = db.prepare(`
+    SELECT notes.* 
+    FROM notes 
+    JOIN conversation_notes ON notes.id = conversation_notes.note_id 
+    WHERE conversation_notes.conversation_id = ?
+  `);
+  return stmt.all(conversationId);
 };
 

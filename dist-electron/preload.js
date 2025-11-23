@@ -10,7 +10,14 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     createNote: (folderId, title, content) => electron_1.ipcRenderer.invoke('create-note', folderId, title, content),
     updateNote: (id, title, content) => electron_1.ipcRenderer.invoke('update-note', id, title, content),
     deleteNote: (id) => electron_1.ipcRenderer.invoke('delete-note', id),
-    askAI: (question) => electron_1.ipcRenderer.invoke('ask-ai', question),
+    askAI: (question, conversationId) => electron_1.ipcRenderer.invoke('ask-ai', question, conversationId),
     getReminders: (noteId) => electron_1.ipcRenderer.invoke('get-reminders', noteId),
     updateReminderStatus: (id, status) => electron_1.ipcRenderer.invoke('update-reminder-status', id, status),
+    // Conversation APIs
+    getConversations: () => electron_1.ipcRenderer.invoke('get-conversations'),
+    getConversation: (id) => electron_1.ipcRenderer.invoke('get-conversation', id),
+    createConversation: (title) => electron_1.ipcRenderer.invoke('create-conversation', title),
+    updateConversationTitle: (id, title) => electron_1.ipcRenderer.invoke('update-conversation-title', id, title),
+    deleteConversation: (id) => electron_1.ipcRenderer.invoke('delete-conversation', id),
+    getMessages: (conversationId) => electron_1.ipcRenderer.invoke('get-messages', conversationId),
 });
