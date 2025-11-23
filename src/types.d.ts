@@ -28,6 +28,7 @@ declare global {
         electronAPI: {
             getFolders: () => Promise<Folder[]>;
             createFolder: (name: string) => Promise<void>;
+            updateFolder: (id: number, name: string) => Promise<void>;
             deleteFolder: (id: number) => Promise<void>;
 
             getNotes: (folderId: number) => Promise<Note[]>;

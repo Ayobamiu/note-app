@@ -60,6 +60,7 @@ const createWindow = () => {
     // IPC Handlers
     electron_1.ipcMain.handle('get-folders', () => (0, db_1.getFolders)());
     electron_1.ipcMain.handle('create-folder', (event, name) => (0, db_1.createFolder)(name));
+    electron_1.ipcMain.handle('update-folder', (event, id, name) => (0, db_1.updateFolder)(id, name));
     electron_1.ipcMain.handle('delete-folder', (event, id) => (0, db_1.deleteFolder)(id));
     // Note Handlers
     electron_1.ipcMain.handle('get-notes', (event, folderId) => (0, db_1.getNotes)(folderId));

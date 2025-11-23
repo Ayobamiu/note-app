@@ -3,6 +3,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 contextBridge.exposeInMainWorld('electronAPI', {
     getFolders: () => ipcRenderer.invoke('get-folders'),
     createFolder: (name: string) => ipcRenderer.invoke('create-folder', name),
+    updateFolder: (id: number, name: string) => ipcRenderer.invoke('update-folder', id, name),
     deleteFolder: (id: number) => ipcRenderer.invoke('delete-folder', id),
 
     getNotes: (folderId: number) => ipcRenderer.invoke('get-notes', folderId),

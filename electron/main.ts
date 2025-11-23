@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
 import path from 'path';
-import { initDB, getFolders, createFolder, deleteFolder, getNotes, createNote, updateNote, deleteNote, getReminders, createReminder, updateReminderStatus, clearPendingReminders } from './db';
+import { initDB, getFolders, createFolder, updateFolder, deleteFolder, getNotes, createNote, updateNote, deleteNote, getReminders, createReminder, updateReminderStatus, clearPendingReminders } from './db';
 import { aiManager } from './ai/manager';
 
 // Initialize database
@@ -26,6 +26,7 @@ const createWindow = () => {
     // IPC Handlers
     ipcMain.handle('get-folders', () => getFolders());
     ipcMain.handle('create-folder', (event: IpcMainInvokeEvent, name: string) => createFolder(name));
+    ipcMain.handle('update-folder', (event: IpcMainInvokeEvent, id: number, name: string) => updateFolder(id, name));
     ipcMain.handle('delete-folder', (event: IpcMainInvokeEvent, id: number) => deleteFolder(id));
 
     // Note Handlers

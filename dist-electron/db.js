@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.clearPendingReminders = exports.updateReminderStatus = exports.createReminder = exports.getReminders = exports.searchNotes = exports.saveEmbedding = exports.deleteNote = exports.updateNote = exports.createNote = exports.getNotes = exports.deleteFolder = exports.createFolder = exports.getFolders = void 0;
+exports.clearPendingReminders = exports.updateReminderStatus = exports.createReminder = exports.getReminders = exports.searchNotes = exports.saveEmbedding = exports.deleteNote = exports.updateNote = exports.createNote = exports.getNotes = exports.deleteFolder = exports.updateFolder = exports.createFolder = exports.getFolders = void 0;
 exports.initDB = initDB;
 const better_sqlite3_1 = __importDefault(require("better-sqlite3"));
 const path_1 = __importDefault(require("path"));
@@ -61,6 +61,11 @@ const createFolder = (name) => {
     return stmt.run(name);
 };
 exports.createFolder = createFolder;
+const updateFolder = (id, name) => {
+    const stmt = db.prepare('UPDATE folders SET name = ? WHERE id = ?');
+    return stmt.run(name, id);
+};
+exports.updateFolder = updateFolder;
 const deleteFolder = (id) => {
     const stmt = db.prepare('DELETE FROM folders WHERE id = ?');
     return stmt.run(id);

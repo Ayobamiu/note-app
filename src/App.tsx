@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Sidebar } from './components/Sidebar';
-import { NoteList } from './components/NoteList';
-import { NoteEditor } from './components/NoteEditor';
-import { ChatInterface } from './components/ChatInterface';
+import { useState, useEffect } from "react";
+import { Sidebar } from "./components/Sidebar";
+import { NoteList } from "./components/NoteList";
+import { NoteEditor } from "./components/NoteEditor";
+import { ChatInterface } from "./components/ChatInterface";
 
 function App() {
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -11,7 +11,7 @@ function App() {
 
   // Refresh trigger for note list
   const [refreshKey, setRefreshKey] = useState(0);
-  const handleNoteUpdate = () => setRefreshKey(prev => prev + 1);
+  const handleNoteUpdate = () => setRefreshKey((prev) => prev + 1);
 
   const loadFolders = async () => {
     const items = await window.electronAPI.getFolders();
@@ -27,8 +27,13 @@ function App() {
     loadFolders();
   };
 
+  const handleUpdateFolder = async (id: number, name: string) => {
+    await window.electronAPI.updateFolder(id, name);
+    loadFolders();
+  };
+
   const handleDeleteFolder = async (id: number) => {
-    if (confirm('Are you sure you want to delete this folder?')) {
+    if (confirm("Are you sure you want to delete this folder?")) {
       await window.electronAPI.deleteFolder(id);
       if (selectedFolderId === id) setSelectedFolderId(null);
       loadFolders();
@@ -38,8 +43,8 @@ function App() {
   return (
     <div className="flex h-screen bg-zinc-50 relative font-sans text-zinc-900">
       <ChatInterface />
-      
-      <Sidebar 
+
+      <Sidebar
         folders={folders}
         selectedFolderId={selectedFolderId}
         onSelectFolder={(id) => {
@@ -47,23 +52,24 @@ function App() {
           setSelectedNote(null);
         }}
         onCreateFolder={handleCreateFolder}
+        onUpdateFolder={handleUpdateFolder}
         onDeleteFolder={handleDeleteFolder}
       />
-      
+
       {selectedFolderId ? (
         <div className="flex flex-1 overflow-hidden">
-          <NoteList 
+          <NoteList
             key={refreshKey} // Force refresh when notes update
             folderId={selectedFolderId}
             onSelectNote={setSelectedNote}
             selectedNoteId={selectedNote?.id || null}
           />
-          
+
           <main className="flex-1 overflow-y-auto bg-white">
             {selectedNote ? (
-              <NoteEditor 
+              <NoteEditor
                 key={selectedNote.id} // Re-mount editor when note changes
-                note={selectedNote} 
+                note={selectedNote}
                 onUpdate={handleNoteUpdate}
               />
             ) : (
@@ -79,7 +85,7 @@ function App() {
         </div>
       )}
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

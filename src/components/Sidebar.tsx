@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Folder, Plus, Trash2 } from "lucide-react";
 import clsx from "clsx";
 
@@ -7,6 +7,7 @@ interface SidebarProps {
   selectedFolderId: number | null;
   onSelectFolder: (id: number) => void;
   onCreateFolder: (name: string) => void;
+  onUpdateFolder: (id: number, name: string) => void;
   onDeleteFolder: (id: number) => void;
 }
 
@@ -15,10 +16,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   selectedFolderId,
   onSelectFolder,
   onCreateFolder,
+  onUpdateFolder,
   onDeleteFolder,
 }) => {
   const [newFolderName, setNewFolderName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [editingFolderId, setEditingFolderId] = useState<number | null>(null);
+  const [editingFolderName, setEditingFolderName] = useState("");
+  const isSubmittingRef = useRef(false);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +32,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
       setNewFolderName("");
       setIsCreating(false);
     }
+  };
+
+  const handleStartEdit = (e: React.MouseEvent, folder: Folder) => {
+    e.stopPropagation();
+    setEditingFolderId(folder.id);
+    setEditingFolderName(folder.name);
+  };
+
+  const handleSaveEdit = async (folderId: number) => {
+    if (editingFolderName.trim()) {
+      await onUpdateFolder(folderId, editingFolderName.trim());
+    }
+    setEditingFolderId(null);
+    setEditingFolderName("");
+    isSubmittingRef.current = false;
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent, folderId: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isSubmittingRef.current = true;
+    await handleSaveEdit(folderId);
+  };
+
+  const handleBlur = async (folderId: number) => {
+    // Use setTimeout to allow form submit to fire first
+    setTimeout(() => {
+      if (!isSubmittingRef.current && editingFolderId === folderId) {
+        handleSaveEdit(folderId);
+      }
+    }, 100);
   };
 
   return (
@@ -40,14 +76,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div
               key={folder.id}
               className={clsx(
-                "group flex items-center justify-between px-2 py-1.5 rounded-md text-sm transition-colors cursor-pointer",
-                selectedFolderId === folder.id
-                  ? "bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200"
-                  : "text-zinc-600 hover:bg-zinc-200/50 hover:text-zinc-900"
+                "group flex items-center justify-between px-2 py-1.5 rounded-md text-sm transition-colors",
+                editingFolderId === folder.id
+                  ? "bg-white"
+                  : selectedFolderId === folder.id
+                  ? "bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200 cursor-pointer"
+                  : "text-zinc-600 hover:bg-zinc-200/50 hover:text-zinc-900 cursor-pointer"
               )}
-              onClick={() => onSelectFolder(folder.id)}
+              onClick={() =>
+                editingFolderId !== folder.id && onSelectFolder(folder.id)
+              }
             >
-              <div className="flex items-center gap-2 truncate">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
                 <Folder
                   size={16}
                   className={clsx(
@@ -56,18 +96,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       : "text-zinc-400"
                   )}
                 />
-                <span className="truncate font-medium">{folder.name}</span>
+                {editingFolderId === folder.id ? (
+                  <form
+                    onSubmit={(e) => handleFormSubmit(e, folder.id)}
+                    className="flex-1 min-w-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <input
+                      type="text"
+                      value={editingFolderName}
+                      onChange={(e) => setEditingFolderName(e.target.value)}
+                      onBlur={() => handleBlur(folder.id)}
+                      className="w-full px-1 py-0.5 text-sm bg-white border border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </form>
+                ) : (
+                  <span
+                    className="truncate font-medium"
+                    onDoubleClick={(e) => handleStartEdit(e, folder)}
+                    title="Double-click to edit"
+                  >
+                    {folder.name}
+                  </span>
+                )}
               </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteFolder(folder.id);
-                }}
-                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 hover:text-red-600 rounded transition-all"
-                title="Delete folder"
-              >
-                <Trash2 size={14} />
-              </button>
+              {editingFolderId !== folder.id && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteFolder(folder.id);
+                  }}
+                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 hover:text-red-600 rounded transition-all"
+                  title="Delete folder"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
             </div>
           ))}
         </div>

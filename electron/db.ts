@@ -59,6 +59,11 @@ export const createFolder = (name: string) => {
   return stmt.run(name);
 };
 
+export const updateFolder = (id: number, name: string) => {
+  const stmt = db.prepare('UPDATE folders SET name = ? WHERE id = ?');
+  return stmt.run(name, id);
+};
+
 export const deleteFolder = (id: number) => {
   const stmt = db.prepare('DELETE FROM folders WHERE id = ?');
   return stmt.run(id);
