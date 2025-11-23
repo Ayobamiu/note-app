@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Folder, Plus, Trash2 } from 'lucide-react';
-import clsx from 'clsx';
+import React, { useState } from "react";
+import { Folder, Plus, Trash2 } from "lucide-react";
+import clsx from "clsx";
 
 interface SidebarProps {
   folders: Folder[];
@@ -17,14 +17,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCreateFolder,
   onDeleteFolder,
 }) => {
-  const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderName, setNewFolderName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newFolderName.trim()) {
       await onCreateFolder(newFolderName);
-      setNewFolderName('');
+      setNewFolderName("");
       setIsCreating(false);
     }
   };
@@ -48,7 +48,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onClick={() => onSelectFolder(folder.id)}
             >
               <div className="flex items-center gap-2 truncate">
-                <Folder size={16} className={clsx(selectedFolderId === folder.id ? "text-blue-500" : "text-zinc-400")} />
+                <Folder
+                  size={16}
+                  className={clsx(
+                    selectedFolderId === folder.id
+                      ? "text-blue-500"
+                      : "text-zinc-400"
+                  )}
+                />
                 <span className="truncate font-medium">{folder.name}</span>
               </div>
               <button
@@ -87,16 +94,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         )}
       </div>
-      
+
       <div className="mt-auto p-4 border-t border-zinc-200/50">
         <div className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-zinc-200/50 cursor-pointer transition-colors">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">
-                U
-            </div>
-            <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-zinc-900 truncate">Usman</p>
-                <p className="text-xs text-zinc-500 truncate">Pro Plan</p>
-            </div>
+          <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-xs shadow-sm">
+            U
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-zinc-900 truncate">Usman</p>
+            <p className="text-xs text-zinc-500 truncate">Pro Plan</p>
+          </div>
         </div>
       </div>
     </div>
