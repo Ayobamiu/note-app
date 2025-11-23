@@ -168,7 +168,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-zinc-900 truncate">Usman</p>
-            <p className="text-xs text-zinc-500 truncate">Pro Plan</p>
           </div>
         </div>
       </div>
